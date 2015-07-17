@@ -2,40 +2,37 @@
 package music
 
 import (
-	//"dataStruct"
 	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
 	"net/http"
-	//	"strings"
-	//"reflect"
 )
 
-const Url = "http://192.168.100.134:9200"
+const urles = "http://192.168.100.134:9200"
+
+var size = 20
 
 /**
 *音乐查询接口1a
  */
 func MusicHandler(w http.ResponseWriter, r *http.Request) {
-	client, err := elastic.NewClient(elastic.SetURL(Url), elastic.SetMaxRetries(10))
+	client, err := elastic.NewClient(elastic.SetURL(urles), elastic.SetMaxRetries(10))
 	if err != nil {
 		fmt.Fprint(w, "ES联接有问题", err)
 	} else {
 		jsdata := r.FormValue("jsondata")
-		fmt.Println(jsdata)
+
 		var conds Conditions
 		err := json.Unmarshal([]byte(jsdata), &conds)
-		if len(conds.UserKey) <= 0 {
+		if err != nil {
+			fmt.Println("格式存在问题")
+		} else if len(conds.UserKey) <= 0 {
 			fmt.Fprint(w, "请出示你的Key")
-		} else {
-			fmt.Println("---->", conds.Special, "-->", len(conds.Special))
-			if err != nil {
-				fmt.Println("格式存在问题")
-			} else {
-				fmt.Fprint(w, getData(*client, conds))
-			}
-		}
 
+		} else {
+			//fmt.Println(conds.ArtisName, conds.Special, conds.Name)
+			fmt.Fprint(w, getData(*client, conds))
+		}
 	}
 
 }
@@ -59,11 +56,12 @@ func getData(client elastic.Client, cond Conditions) string {
 			searchService = searchService.Query(elastic.NewWildcardQuery("special", "*"+cond.Special+"*"))
 		}
 	}
-	serarchResult, err := searchService.From(0).Size(20).Pretty(true).Timeout("2s").Do()
+	serarchResult, err := searchService.From(0).Size(size).Pretty(true).Timeout("3s").Do()
 	if err != nil {
 		return "传入值有问题，没能找到你想要的歌曲"
 	} else {
-		items := make([]interface{}, 1, 1)
+		//items := make([]interface{}, 1, 1)
+		var items []interface{}
 		var item interface{} = ""
 		i := 0
 		for _, hit := range serarchResult.Hits.Hits {
@@ -75,14 +73,17 @@ func getData(client elastic.Client, cond Conditions) string {
 				fmt.Println(err)
 			}
 			items = append(items, item)
-			if i >= 19 {
+			items[i] = item
+			fmt.Println("本次查询的条数是：", i)
+			if i >= size-1 {
 				break
 			}
 			i = i + 1
 		}
-		for _, s := range items {
-			fmt.Println(s)
+		if len(items) <= 0 {
+			items = append(items, "没能找到你需要的歌曲")
 		}
+
 		lang, errjs := json.Marshal(items)
 		if errjs != nil {
 			fmt.Println("JSON", errjs)
@@ -93,21 +94,21 @@ func getData(client elastic.Client, cond Conditions) string {
 	return "没能找到你需要的歌曲"
 }
 
-type Tweet struct {
-	Name string "name"
-	//	Style        string "style"
-	//	Ablum        string "ablum"
-	//	PublishDate  string "publishDate"
-	//	Rate         string "rate"
-	//	size         string "size"
-	//	AudioId      string "audioID"
-	//	LrcID        string "lrcID"
-	//	DownloadNum  string "downloadNum"
-	//	PlayNum      string "playNum"
-	//	HotNum       string "hotNum"
-	ArtisName string "artisName"
-	//	ArtistGender string "artistGender"
-}
+//type Tweet struct {
+//Name string "name"
+//	Style        string "style"
+//	Ablum        string "ablum"
+//	PublishDate  string "publishDate"
+//	Rate         string "rate"
+//	size         string "size"
+//	AudioId      string "audioID"
+//	LrcID        string "lrcID"
+//	DownloadNum  string "downloadNum"
+//	PlayNum      string "playNum"
+//	HotNum       string "hotNum"
+//ArtisName string "artisName"
+//	ArtistGender string "artistGender"
+//}
 type Conditions struct {
 	ArtisName string "artisName"
 	Special   string "special"
