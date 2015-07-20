@@ -30,33 +30,53 @@ func MusicHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "请出示你的Key")
 
 		} else {
-			//fmt.Println(conds.ArtisName, conds.Special, conds.Name)
+			fmt.Println(conds.ArtisName, conds.Special, conds.Name)
 			fmt.Fprint(w, getData(*client, conds))
 		}
 	}
 
 }
 
-func getData(client elastic.Client, cond Conditions) string {
-
-	searchService := client.Search()
-	searchService = searchService.SearchType("dfs_query_then_fetch")
-	searchService = searchService.Index("music")
+func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, error) {
 	if len(cond.All) > 0 {
-		searchService = searchService.Query(elastic.NewQueryStringQuery(cond.All))
+		return client.Search().
+			Index("music").
+			SearchType("dfs_query_then_fetch").
+			Query(elastic.NewQueryStringQuery(cond.All)).
+			From(0).
+			Size(size).
+			Timeout("3s").
+			Do()
 	} else {
+		qbool := elastic.NewBoolQuery()
 		if len(cond.ArtisName) > 0 {
-			//	elastic.NewWildcardQuery("Name", "*hu*").Boost(1.2)
-			searchService = searchService.Query(elastic.NewWildcardQuery("artisName", "*"+cond.ArtisName+"*"))
+			q_artisName := elastic.NewQueryStringQuery(cond.ArtisName)
+			q_artisName = q_artisName.DefaultField("artistName")
+			qbool = qbool.Must(q_artisName)
 		}
 		if len(cond.Name) > 0 {
-			searchService = searchService.Query(elastic.NewWildcardQuery("name", "*"+cond.Name+"*"))
+			q_name := elastic.NewQueryStringQuery(cond.Name)
+			q_name = q_name.DefaultField("name")
+			qbool = qbool.Must(q_name)
 		}
 		if len(cond.Special) > 0 {
-			searchService = searchService.Query(elastic.NewWildcardQuery("special", "*"+cond.Special+"*"))
+			q_special := elastic.NewQueryStringQuery(cond.Special)
+			q_special = q_special.DefaultField("special")
+			qbool = qbool.Must(q_special)
 		}
+		data, errdata := json.Marshal(qbool.Source())
+		if errdata == nil {
+			fmt.Println(string(data))
+		}
+		return client.Search().Query(qbool).From(0).Size(size).Timeout("3s").Do()
 	}
-	serarchResult, err := searchService.From(0).Size(size).Pretty(true).Timeout("3s").Do()
+	return nil, nil
+}
+
+func getData(client elastic.Client, cond Conditions) string {
+
+	serarchResult, err := elResult(client, cond)
+
 	if err != nil {
 		return "传入值有问题，没能找到你想要的歌曲"
 	} else {
