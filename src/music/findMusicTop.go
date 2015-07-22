@@ -7,11 +7,12 @@ import (
 	//	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
 const (
-	url_mg  = "192.168.102.194,192.168.102.195,192.168.102.196"
+	url_mg  = "192.168.102.140,192.168.102.139,192.168.102.138"
 	mongodb = "Music"
 )
 
@@ -35,7 +36,6 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
 	db := session.DB(mongodb)
-
 	Id := parameter["ids"]
 	Userkey := parameter["userkey"]
 	Ids := strings.Split(parameter["ids"], ",")
@@ -47,14 +47,15 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "您的key值不合法")
 		} else {
 			for i := 0; i < len(Ids); i++ {
-				file, err := db.GridFS("fs").OpenId(Ids[i])
-				//Open("2.mp4")
+				gfs := db.GridFS("fs")
+				file, err := gfs.OpenId(Ids[i])
 				if err == nil {
 					b := make([]byte, file.Size())
 					check(err)
 					m, err := file.Read(b)
 					fmt.Print("m=", m)
 					check(err)
+					w.Header().Set("size", strconv.Itoa(m))
 					_, err = w.Write(b)
 				} else {
 					fmt.Fprintf(w, "没有查询到你需要的资源")
@@ -62,4 +63,5 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
 }
