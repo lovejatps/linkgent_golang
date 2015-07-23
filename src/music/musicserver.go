@@ -92,6 +92,10 @@ func getData(client elastic.Client, cond Conditions) string {
 			if err != nil {
 				fmt.Println(err)
 			}
+			itemap := item.(map[string]interface{})
+			itemap["musictopurl"] = ""
+			itemap["musiclrcurl"] = ""
+			item = itemap
 			items = append(items, item)
 			items[i] = item
 			fmt.Println("本次查询的条数是：", i)
