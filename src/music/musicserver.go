@@ -40,7 +40,7 @@ func MusicHandler(w http.ResponseWriter, r *http.Request) {
 func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, error) {
 	if len(cond.All) > 0 {
 		return client.Search().
-			Index("music").
+			Index("music2").
 			SearchType("dfs_query_then_fetch").
 			Query(elastic.NewQueryStringQuery(cond.All)).
 			From(0).
@@ -68,7 +68,7 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 		if errdata == nil {
 			fmt.Println(string(data))
 		}
-		return client.Search().Query(qbool).From(0).Size(size).Timeout("3s").Do()
+		return client.Search().Index("music2").Query(qbool).From(0).Size(size).Timeout("3s").Do()
 	}
 	return nil, nil
 }
