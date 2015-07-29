@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	url_mg  = "192.168.102.140,192.168.102.139,192.168.102.138"
+	url_mg  = "192.168.102.179,192.168.102.180,192.168.102.181"
 	mongodb = "Music"
 )
 
@@ -24,6 +24,9 @@ func check(err error) {
 }
 
 func FindMusicTop(w http.ResponseWriter, r *http.Request) {
+	ran := r.Header.Get("Range")
+	rans := strings.Split(ran, "=")
+	bytelen := strings.Replace(rans[1], "-", "", -1)
 	r.ParseForm() //解析参数，默认是不会解析的
 	parameter := make(map[string]string)
 	for k, v := range r.Form {
@@ -55,10 +58,21 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 					m, err := file.Read(b)
 					fmt.Print("m=", m)
 					check(err)
-					w.Header().Set("size", strconv.Itoa(m))
-					_, err = w.Write(b)
+					w.Header().Set("Content-Length", strconv.Itoa(m))
+					if strings.EqualFold(Userkey, "") {
+						_, err = w.Write(b)
+					} else {
+						bytesize, error := strconv.Atoi(bytelen)
+						if error != nil {
+							bsub := b[bytesize:file.Size()]
+							_, err = w.Write(bsub)
+						} else {
+							_, err = w.Write(b)
+						}
+					}
+
 				} else {
-					fmt.Fprintf(w, "没有查询到你需要的资源")
+					fmt.Fprintf(w, "没有查询到你需要的歌曲")
 				}
 			}
 		}

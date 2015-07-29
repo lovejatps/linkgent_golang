@@ -50,17 +50,17 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 	} else {
 		qbool := elastic.NewBoolQuery()
 		if len(cond.ArtisName) > 0 {
-			q_artisName := elastic.NewQueryStringQuery(cond.ArtisName)
+			q_artisName := elastic.NewQueryStringQuery(cond.ArtisName).AnalyzeWildcard(false).DefaultOperator("and")
 			q_artisName = q_artisName.DefaultField("artistName")
 			qbool = qbool.Must(q_artisName)
 		}
 		if len(cond.Name) > 0 {
-			q_name := elastic.NewQueryStringQuery(cond.Name)
+			q_name := elastic.NewQueryStringQuery(cond.Name).AnalyzeWildcard(false).DefaultOperator("and")
 			q_name = q_name.DefaultField("name")
 			qbool = qbool.Must(q_name)
 		}
 		if len(cond.Special) > 0 {
-			q_special := elastic.NewQueryStringQuery(cond.Special)
+			q_special := elastic.NewQueryStringQuery(cond.Special).AnalyzeWildcard(false).DefaultOperator("and")
 			q_special = q_special.DefaultField("special")
 			qbool = qbool.Must(q_special)
 		}
@@ -83,8 +83,7 @@ func getData(client elastic.Client, cond Conditions) string {
 		//items := make([]interface{}, 1, 1)
 		var items []interface{}
 		var item interface{} = ""
-		i := 0
-		for _, hit := range serarchResult.Hits.Hits {
+		for i, hit := range serarchResult.Hits.Hits {
 			if hit.Index != "music" {
 				fmt.Errorf("expected SearchResult.Hits.Hit.Index = %q; got %q", "music", hit.Index)
 			}
@@ -105,14 +104,26 @@ func getData(client elastic.Client, cond Conditions) string {
 			i = i + 1
 		}
 		if len(items) <= 0 {
-			items = append(items, "没能找到你需要的歌曲")
+			fmt.Println("本地未能找到你需要的歌曲")
+			var condition string
+			if len(cond.ArtisName) > 0 {
+				condition = cond.ArtisName
+			}
+			if len(cond.Name) > 0 {
+				condition = condition + "+" + cond.Name
+			}
+			if len(cond.Special) > 0 {
+				condition = condition + "+" + cond.Special
+			}
+			str := GetMusicJosn(GetMusicID(condition))
+			return str
+		} else {
+			lang, errjs := json.Marshal(items)
+			if errjs != nil {
+				fmt.Println("JSON", errjs)
+			}
+			return string(lang)
 		}
-
-		lang, errjs := json.Marshal(items)
-		if errjs != nil {
-			fmt.Println("JSON", errjs)
-		}
-		return string(lang)
 
 	}
 	return "没能找到你需要的歌曲"
