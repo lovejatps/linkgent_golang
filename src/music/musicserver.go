@@ -3,6 +3,7 @@ package music
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/olivere/elastic"
 	"math/rand"
@@ -11,7 +12,12 @@ import (
 	"time"
 )
 
-const urles = "http://192.168.100.134:9200"
+const (
+	urles    = "http://192.168.100.134:9200"
+	hotum    = 80000000
+	random   = 8000
+	indexing = "music2"
+)
 
 var size = 20
 
@@ -42,25 +48,50 @@ func MusicHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, error) {
+	//---------20150730下午修必ALl查询--------------
 	if len(cond.All) > 0 {
 
-		//QueryStringQuery q = elastic.NewQueryStringQuery(cond.All).Analyzer("ik").Boost(0.1)
-		return client.Search().
-			Index("music2").
-			SearchType("dfs_query_then_fetch").
-			Query(elastic.NewQueryStringQuery(cond.All).Analyzer("ik").Boost(0.1)).
-			From(0).
-			Size(size).
-			Explain(true).
-			Timeout("3s").
-			Do()
+		q := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(false).DefaultOperator("or").Boost(0.4)
+		q = q.DefaultField("artistName")
+
+		q2 := elastic.NewQueryStringQuery(cond.All).Analyzer("ik").AnalyzeWildcard(true).DefaultOperator("or").Boost(0.2)
+		q2 = q2.DefaultField("name")
+
+		q3 := elastic.NewQueryStringQuery(cond.All).Analyzer("ik").AnalyzeWildcard(true).DefaultOperator("or").Boost(0.1)
+		q3 = q2.DefaultField("special")
+
+		qbool := elastic.NewBoolQuery()
+		qbool = qbool.Must(q)
+		serarchResult, err := client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool).From(0).Size(size).Explain(true).Timeout("1s").Do()
+		fmt.Println("artistName", serarchResult, err, " len(searchResult.Hits.Hits):", len(serarchResult.Hits.Hits))
+		if len(serarchResult.Hits.Hits) > 0 {
+			fmt.Println("artistName")
+			return serarchResult, err
+		} else {
+			qbool2 := elastic.NewBoolQuery()
+			qbool2 = qbool2.Must(q2)
+			serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool2).From(0).Size(size).Explain(true).Timeout("1s").Do()
+			if len(serarchResult.Hits.Hits) > 0 {
+				fmt.Println("Name")
+				return serarchResult, err
+			} else {
+				qbool3 := elastic.NewBoolQuery()
+				qbool3 = qbool3.Must(q3)
+				serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool3).From(0).Size(size).Explain(true).Timeout("1s").Do()
+				if len(serarchResult.Hits.Hits) > 0 {
+					fmt.Println("special")
+					return serarchResult, err
+				} else {
+					return nil, errors.New("没能找到你需要的歌曲")
+				}
+			}
+		}
+
 	} else {
-		if len(cond.ArtisName) == 0 && len(cond.ArtisName) == 0 && len(cond.Special) == 0 { //默认列表
-			fmt.Println("默认列表")
+		if len(cond.ArtisName) == 0 && len(cond.Name) == 0 && len(cond.Special) == 0 { //默认列表
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			mathdata := (r.Intn(100) + 1) * 8000
-			fmt.Println(strconv.Itoa(mathdata))
-			q := elastic.NewRangeQuery("hotNum").From(strconv.Itoa(mathdata)).To(800000000)
+			mathdata := (r.Intn(100) + 1) * random
+			q := elastic.NewRangeQuery("hotNum").From(strconv.Itoa(mathdata)).To(hotum)
 			data, errdata := json.Marshal(q.Source())
 			if errdata != nil {
 				fmt.Println(string(data))
@@ -90,7 +121,7 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 			if errdata == nil {
 				fmt.Println(string(data))
 			}
-			return client.Search().Index("music2").Query(qbool).Explain(true).From(0).Size(size).Timeout("3s").Do()
+			return client.Search().Index(indexing).Query(qbool).Explain(true).From(0).Size(size).Timeout("3s").Do()
 		}
 
 	}
@@ -121,7 +152,7 @@ func getData(client elastic.Client, cond Conditions) string {
 			item = itemap
 			items = append(items, item)
 			items[i] = item
-			fmt.Println("本次查询的条数是：", i)
+			//fmt.Println("本次查询的条数是：", i)
 			if i >= size-1 {
 				break
 			}
@@ -138,6 +169,9 @@ func getData(client elastic.Client, cond Conditions) string {
 			}
 			if len(cond.Special) > 0 {
 				condition = condition + "+" + cond.Special
+			}
+			if len(cond.All) > 0 {
+				condition = cond.All
 			}
 			str := GetMusicJosn(GetMusicID(condition))
 			return str

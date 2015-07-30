@@ -29,6 +29,7 @@ func GetMusicJosn(items []interface{}) string {
 			log.Fatalln(err)
 		}
 		itemap = make(map[string]interface{})
+
 		jsondata = jsondata.Get("data").Get("songList").GetIndex(0)
 		var item interface{} = ""
 		itemap["albumName"] = jsondata.GetPath("albumName").MustString()
@@ -47,6 +48,7 @@ func GetMusicJosn(items []interface{}) string {
 		itemap["size"] = jsondata.GetPath("size").Interface()
 		itemap["style"] = -1
 		itemap["time"] = jsondata.GetPath("time").Interface()
+
 		item = itemap
 		jsitems = append(jsitems, item)
 
