@@ -25,8 +25,8 @@ func check(err error) {
 
 func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 	ran := r.Header.Get("Range")
-	rans := strings.Split(ran, "=")
-	bytelen := strings.Replace(rans[1], "-", "", -1)
+	fmt.Println("ran=", ran)
+
 	r.ParseForm() //解析参数，默认是不会解析的
 	parameter := make(map[string]string)
 	for k, v := range r.Form {
@@ -59,15 +59,20 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 					fmt.Print("m=", m)
 					check(err)
 					w.Header().Set("Content-Length", strconv.Itoa(m))
-					if strings.EqualFold(Userkey, "") {
+					fmt.Println("ssss=", w.Header().Get("Content-Length"))
+					if strings.EqualFold(ran, "") {
 						_, err = w.Write(b)
 					} else {
-						bytesize, error := strconv.Atoi(bytelen)
-						if error != nil {
+						rans := strings.Split(ran, "=")
+						bytelen := strings.Replace(rans[1], "-", "", -1)
+						bytesize, errs := strconv.Atoi(bytelen)
+						if errs == nil {
 							bsub := b[bytesize:file.Size()]
 							_, err = w.Write(bsub)
+
 						} else {
 							_, err = w.Write(b)
+
 						}
 					}
 
