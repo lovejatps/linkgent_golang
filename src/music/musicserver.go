@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
+	"math/rand"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 const urles = "http://192.168.100.134:9200"
@@ -40,36 +43,56 @@ func MusicHandler(w http.ResponseWriter, r *http.Request) {
 
 func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, error) {
 	if len(cond.All) > 0 {
+
+		//QueryStringQuery q = elastic.NewQueryStringQuery(cond.All).Analyzer("ik").Boost(0.1)
 		return client.Search().
 			Index("music2").
 			SearchType("dfs_query_then_fetch").
 			Query(elastic.NewQueryStringQuery(cond.All).Analyzer("ik").Boost(0.1)).
 			From(0).
 			Size(size).
+			Explain(true).
 			Timeout("3s").
 			Do()
 	} else {
-		qbool := elastic.NewBoolQuery()
-		if len(cond.ArtisName) > 0 {
-			q_artisName := elastic.NewQueryStringQuery(cond.ArtisName).AnalyzeWildcard(false).DefaultOperator("and")
-			q_artisName = q_artisName.DefaultField("artistName")
-			qbool = qbool.Must(q_artisName)
+		if len(cond.ArtisName) == 0 && len(cond.ArtisName) == 0 && len(cond.Special) == 0 { //默认列表
+			fmt.Println("默认列表")
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			mathdata := (r.Intn(100) + 1) * 8000
+			fmt.Println(strconv.Itoa(mathdata))
+			q := elastic.NewRangeQuery("hotNum").From(strconv.Itoa(mathdata)).To(800000000)
+			data, errdata := json.Marshal(q.Source())
+			if errdata != nil {
+				fmt.Println(string(data))
+			} else {
+				fmt.Println(string(data))
+			}
+			return client.Search().SearchType("dfs_query_then_fetch").Query(q).From(0).Size(size).Explain(true).Timeout("3s").Do()
+
+		} else {
+			qbool := elastic.NewBoolQuery()
+			if len(cond.ArtisName) > 0 {
+				q_artisName := elastic.NewQueryStringQuery(cond.ArtisName).AnalyzeWildcard(false).DefaultOperator("and")
+				q_artisName = q_artisName.DefaultField("artistName")
+				qbool = qbool.Must(q_artisName)
+			}
+			if len(cond.Name) > 0 {
+				q_name := elastic.NewQueryStringQuery(cond.Name).AnalyzeWildcard(false).DefaultOperator("and")
+				q_name = q_name.DefaultField("name")
+				qbool = qbool.Must(q_name)
+			}
+			if len(cond.Special) > 0 {
+				q_special := elastic.NewQueryStringQuery(cond.Special).AnalyzeWildcard(false).DefaultOperator("and")
+				q_special = q_special.DefaultField("special")
+				qbool = qbool.Must(q_special)
+			}
+			data, errdata := json.Marshal(qbool.Source())
+			if errdata == nil {
+				fmt.Println(string(data))
+			}
+			return client.Search().Index("music2").Query(qbool).Explain(true).From(0).Size(size).Timeout("3s").Do()
 		}
-		if len(cond.Name) > 0 {
-			q_name := elastic.NewQueryStringQuery(cond.Name).AnalyzeWildcard(false).DefaultOperator("and")
-			q_name = q_name.DefaultField("name")
-			qbool = qbool.Must(q_name)
-		}
-		if len(cond.Special) > 0 {
-			q_special := elastic.NewQueryStringQuery(cond.Special).AnalyzeWildcard(false).DefaultOperator("and")
-			q_special = q_special.DefaultField("special")
-			qbool = qbool.Must(q_special)
-		}
-		data, errdata := json.Marshal(qbool.Source())
-		if errdata == nil {
-			fmt.Println(string(data))
-		}
-		return client.Search().Index("music2").Query(qbool).From(0).Size(size).Timeout("3s").Do()
+
 	}
 	return nil, nil
 }
