@@ -56,23 +56,28 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 					b := make([]byte, file.Size())
 					check(err)
 					m, err := file.Read(b)
-					fmt.Print("m=", m)
-					check(err)
-					w.Header().Set("Content-Length", strconv.Itoa(m))
-					fmt.Println("ssss=", w.Header().Get("Content-Length"))
-					if strings.EqualFold(ran, "") {
-						_, err = w.Write(b)
+					if err != nil {
+						fmt.Fprintln(w, "读取歌曲信息出错")
+
 					} else {
-						rans := strings.Split(ran, "=")
-						bytelen := strings.Replace(rans[1], "-", "", -1)
-						bytesize, errs := strconv.Atoi(bytelen)
-						if errs == nil {
-							bsub := b[bytesize:file.Size()]
-							_, err = w.Write(bsub)
-
-						} else {
+						fmt.Print("m=", m)
+						check(err)
+						w.Header().Set("Content-Length", strconv.Itoa(m))
+						fmt.Println("ssss=", w.Header().Get("Content-Length"))
+						if strings.EqualFold(ran, "") {
 							_, err = w.Write(b)
+						} else {
+							rans := strings.Split(ran, "=")
+							bytelen := strings.Replace(rans[1], "-", "", -1)
+							bytesize, errs := strconv.Atoi(bytelen)
+							if errs == nil {
+								bsub := b[bytesize:file.Size()]
+								_, err = w.Write(bsub)
 
+							} else {
+								_, err = w.Write(b)
+
+							}
 						}
 					}
 

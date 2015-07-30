@@ -26,6 +26,7 @@ func MusicHandler(w http.ResponseWriter, r *http.Request) {
 		err := json.Unmarshal([]byte(jsdata), &conds)
 		if err != nil {
 			fmt.Println("格式存在问题")
+			fmt.Fprint(w, "格式存在问题")
 		} else if len(conds.UserKey) <= 0 {
 			fmt.Fprint(w, "请出示你的Key")
 
@@ -42,7 +43,7 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 		return client.Search().
 			Index("music2").
 			SearchType("dfs_query_then_fetch").
-			Query(elastic.NewQueryStringQuery(cond.All)).
+			Query(elastic.NewQueryStringQuery(cond.All).Analyzer("ik").Boost(0.1)).
 			From(0).
 			Size(size).
 			Timeout("3s").
