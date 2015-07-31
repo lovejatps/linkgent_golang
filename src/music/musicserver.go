@@ -54,10 +54,10 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 		q := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(false).DefaultOperator("or").Boost(0.4)
 		q = q.DefaultField("artistName")
 
-		q2 := elastic.NewQueryStringQuery(cond.All).Analyzer("ik").AnalyzeWildcard(true).DefaultOperator("or").Boost(0.2)
+		q2 := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(true).DefaultOperator("or").Boost(0.2)
 		q2 = q2.DefaultField("name")
 
-		q3 := elastic.NewQueryStringQuery(cond.All).Analyzer("ik").AnalyzeWildcard(true).DefaultOperator("or").Boost(0.1)
+		q3 := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(true).DefaultOperator("or").Boost(0.1)
 		q3 = q2.DefaultField("special")
 
 		qbool := elastic.NewBoolQuery()
