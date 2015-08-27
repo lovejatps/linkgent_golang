@@ -126,7 +126,6 @@ func GetMusicID(name string) []interface{} {
 					if strings.Contains(str, "/") {
 						item_ht := strings.Split(str, "/")
 						str = item_ht[len(item_ht)-1]
-
 					} else {
 						continue
 					}

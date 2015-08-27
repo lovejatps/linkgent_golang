@@ -51,33 +51,33 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 	//---------20150730下午修必ALl查询--------------
 	if len(cond.All) > 0 {
 
-		q := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(false).DefaultOperator("or").Boost(0.4)
-		q = q.DefaultField("artistName")
+		q := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(true).DefaultOperator("or").Boost(0.4)
+		q = q.DefaultField("name")
 
 		q2 := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(true).DefaultOperator("or").Boost(0.2)
-		q2 = q2.DefaultField("name")
+		q2 = q2.DefaultField("artistName")
 
 		q3 := elastic.NewQueryStringQuery(cond.All).AnalyzeWildcard(true).DefaultOperator("or").Boost(0.1)
 		q3 = q2.DefaultField("special")
 
 		qbool := elastic.NewBoolQuery()
 		qbool = qbool.Must(q)
-		serarchResult, err := client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool).From(0).Size(size).Explain(true).Timeout("1s").Do()
-		fmt.Println("artistName", serarchResult, err, " len(searchResult.Hits.Hits):", len(serarchResult.Hits.Hits))
+		builder := elastic.SortInfo{Field: "hotNum", Ascending: false} //指定按hotNum排序
+		serarchResult, err := client.Search().Index(indexing).SearchType("dfs_query_then_fetch").SortWithInfo(builder).Query(qbool).From(0).Size(size).Explain(true).Timeout("1s").Do()
 		if len(serarchResult.Hits.Hits) > 0 {
-			fmt.Println("artistName")
+			fmt.Println("Name")
 			return serarchResult, err
 		} else {
 			qbool2 := elastic.NewBoolQuery()
 			qbool2 = qbool2.Must(q2)
-			serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool2).From(0).Size(size).Explain(true).Timeout("1s").Do()
+			serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").SortWithInfo(builder).Query(qbool2).From(0).Size(size).Explain(true).Timeout("1s").Do()
 			if len(serarchResult.Hits.Hits) > 0 {
-				fmt.Println("Name")
+				fmt.Println("artistName")
 				return serarchResult, err
 			} else {
 				qbool3 := elastic.NewBoolQuery()
 				qbool3 = qbool3.Must(q3)
-				serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").Query(qbool3).From(0).Size(size).Explain(true).Timeout("1s").Do()
+				serarchResult, err = client.Search().Index(indexing).SearchType("dfs_query_then_fetch").SortWithInfo(builder).Query(qbool3).From(0).Size(size).Explain(true).Timeout("1s").Do()
 				if len(serarchResult.Hits.Hits) > 0 {
 					fmt.Println("special")
 					return serarchResult, err
@@ -98,7 +98,9 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 			} else {
 				fmt.Println(string(data))
 			}
-			return client.Search().SearchType("dfs_query_then_fetch").Query(q).From(0).Size(size).Explain(true).Timeout("3s").Do()
+			//	builder := SortInfo{Field: "hotNum", Ascending: false} //指定按hotNum排序
+			return client.Search().SearchType("dfs_query_then_fetch").
+				Query(q).From(0).Size(size).Explain(true).Timeout("3s").Do()
 
 		} else {
 			qbool := elastic.NewBoolQuery()
@@ -121,7 +123,9 @@ func elResult(client elastic.Client, cond Conditions) (*elastic.SearchResult, er
 			if errdata == nil {
 				fmt.Println(string(data))
 			}
-			return client.Search().Index(indexing).Query(qbool).Explain(true).From(0).Size(size).Timeout("3s").Do()
+			//	builder := SortInfo{Field: "hotNum", Ascending: false} //指定按hotNum排序
+			return client.Search().Index(indexing).
+				Query(qbool).Explain(true).From(0).Size(size).Timeout("3s").Do()
 		}
 
 	}
