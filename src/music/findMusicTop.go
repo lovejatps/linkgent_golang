@@ -41,6 +41,7 @@ func FindMusicTop(w http.ResponseWriter, r *http.Request) {
 	db := session.DB(mongodb)
 	Id := parameter["ids"]
 	Userkey := parameter["userkey"]
+
 	Ids := strings.Split(parameter["ids"], ",")
 	//读取二进制文件
 	if strings.EqualFold(Id, "") {

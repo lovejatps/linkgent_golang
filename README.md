@@ -27,3 +27,4 @@ command=/your/path
 /usr/local/bin/supervisord -c /etc/supervisord.conf
 
 test  git branch
+new develop  !!!
