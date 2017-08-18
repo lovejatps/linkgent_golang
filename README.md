@@ -31,3 +31,5 @@ new develop  !!!
 hello !
 
 测试切换后的分支
+
+release1.0 6d16aa7 test   
