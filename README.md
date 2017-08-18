@@ -29,3 +29,5 @@ command=/your/path
 test  git branch
 new develop  !!!
 hello !
+
+测试切换后的分支
