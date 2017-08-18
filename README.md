@@ -25,3 +25,5 @@ command=/your/path
 格式添加程序
 
 /usr/local/bin/supervisord -c /etc/supervisord.conf
+
+test  git branch
